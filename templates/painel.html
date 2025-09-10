@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel do Admin</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #fafafa; padding: 20px; }
+        h1 { text-align: center; color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background: #0095f6; color: white; }
+        tr:nth-child(even) { background: #f9f9f9; }
+    </style>
+</head>
+<body>
+    <h1>Painel de Logins</h1>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Usuário</th>
+            <th>Senha</th>
+        </tr>
+        {% for id, username, password in logins %}
+        <tr>
+            <td>{{ id }}</td>
+            <td>{{ username }}</td>
+            <td>{{ password }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
