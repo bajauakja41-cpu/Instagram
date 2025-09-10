@@ -1,46 +1,49 @@
-import os
-from flask import Flask, render_template, request, redirect
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template, request, redirect, url_for
+from sqlalchemy import create_engine, text
 
 app = Flask(__name__)
 
-# 🔹 Use a variável de ambiente do Render ou essa URL fixa (apenas para testes locais)
-db_url = os.getenv(
-    "DATABASE_URL",
-    "postgresql://banco_de_dados_vbur_user:YxTha35htBXbCaVSXf11rpaLfGTFbLHJ@dpg-d30uip7fte5s73fsljf0-a.oregon-postgres.render.com/banco_de_dados_vbur"
-)
+# Conexão com banco do Render
+DB_URL = "postgresql://banco_de_dados_vbur_user:YxTha35htBXbCaVSXf11rpaLfGTFbLHJ@dpg-d30uip7fte5s73fsljf0-a.oregon-postgres.render.com/banco_de_dados_vbur"
+engine = create_engine(DB_URL, echo=True)
 
-# Render às vezes usa o prefixo antigo postgres:// → corrigimos
-if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
-
-app.config["SQLALCHEMY_DATABASE_URI"] = db_url
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-db = SQLAlchemy(app)
-
-# Modelo
-class Usuario(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    senha = db.Column(db.String(120), nullable=False)
+# 🔹 Criar tabela se não existir
+with engine.begin() as conn:
+    conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id SERIAL PRIMARY KEY,
+            email TEXT UNIQUE NOT NULL,
+            senha TEXT NOT NULL
+        )
+    """))
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
-@app.route("/cadastro", methods=["POST"])
-def cadastro():
-    email = request.form["email"]
-    senha = request.form["senha"]
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        email = request.form["email"]
+        senha = request.form["senha"]
 
-    novo = Usuario(email=email, senha=senha)
-    db.session.add(novo)
-    db.session.commit()
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("SELECT * FROM usuarios WHERE email = :email AND senha = :senha"),
+                {"email": email, "senha": senha}
+            ).fetchone()
 
-    return redirect("/")
+        if result:
+            return redirect(url_for("painel"))
+        else:
+            error = "Usuário ou senha incorretos."
+
+    return render_template("index.html", error=error)
+
+@app.route("/painel")
+def painel():
+    return render_template("painel.html")
 
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()  # cria tabelas no Postgres automaticamente
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(debug=True)
